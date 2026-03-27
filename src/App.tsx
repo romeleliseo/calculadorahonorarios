@@ -116,10 +116,26 @@ export default function App() {
     setShowEmailModal(true);
   };
 
-  const proceedWithDownload = async () => {
-    if (userData.email || userData.name) {
+  const proceedWithDownload = async (shouldSend = true) => {
+    if (shouldSend && (userData.email || userData.name)) {
       console.log('User captured:', userData);
-      localStorage.setItem('calc_user_captured', JSON.stringify(userData));
+      
+      // Enviar a Google Apps Script
+      try {
+        fetch('https://script.google.com/macros/s/AKfycbzKp7anQs72QfK-9nIom63HWtRa8cLMYMdw8_spWRUvB9Nr5ch97xlq_HRuH9Mh-PGL/exec', {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            nombre: userData.name,
+            email: userData.email
+          }),
+        });
+      } catch (err) {
+        console.error('Error sending data:', err);
+      }
     }
     
     setShowEmailModal(false);
@@ -713,13 +729,13 @@ export default function App() {
 
                 <div className="mt-8 flex flex-col gap-3">
                   <button 
-                    onClick={proceedWithDownload}
+                    onClick={() => proceedWithDownload(true)}
                     className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors"
                   >
                     Descargar Ahora
                   </button>
                   <button 
-                    onClick={proceedWithDownload}
+                    onClick={() => proceedWithDownload(false)}
                     className="w-full text-slate-400 py-2 text-sm font-medium hover:text-slate-600 transition-colors"
                   >
                     Omitir y descargar
