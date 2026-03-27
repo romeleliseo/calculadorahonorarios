@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import { Info, Calculator, ArrowRight, DollarSign, Clock, Briefcase, Percent, Globe, Plus, Trash2, Download, FileText, Save } from 'lucide-react';
+import { Info, Calculator, ArrowRight, DollarSign, Clock, Briefcase, Percent, Globe, Plus, Trash2, Download, FileText, Save, X, ChevronUp } from 'lucide-react';
 import { toPng } from 'html-to-image';
+import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
   // Configuración Regional
@@ -27,7 +28,12 @@ export default function App() {
   const [financiamiento, setFinanciamiento] = useState<number | ''>(1);
   const [utilidad, setUtilidad] = useState<number | ''>(10);
 
+  // PWA & Modal State
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [userData, setUserData] = useState({ name: '', email: '' });
+
   const captureRef = useRef<HTMLDivElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   // Guardado automático en LocalStorage
   useEffect(() => {
@@ -106,7 +112,18 @@ export default function App() {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda }).format(val);
   };
 
-  const exportAsImage = async () => {
+  const handleDownloadClick = () => {
+    setShowEmailModal(true);
+  };
+
+  const proceedWithDownload = async () => {
+    if (userData.email || userData.name) {
+      console.log('User captured:', userData);
+      localStorage.setItem('calc_user_captured', JSON.stringify(userData));
+    }
+    
+    setShowEmailModal(false);
+    
     if (captureRef.current === null) return;
     
     try {
@@ -118,6 +135,10 @@ export default function App() {
     } catch (err) {
       console.error('Error al exportar imagen:', err);
     }
+  };
+
+  const scrollToResults = () => {
+    resultsRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   const chartData = [
@@ -409,7 +430,7 @@ export default function App() {
           </div>
 
           {/* Results Section */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="lg:col-span-5 space-y-6" ref={resultsRef}>
             
             <div className="bg-slate-900 text-white rounded-3xl p-8 shadow-xl sticky top-24">
               <h2 className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-2">Total a Cobrar</h2>
@@ -500,7 +521,7 @@ export default function App() {
 
               <div className="mt-6">
                 <button
-                  onClick={exportAsImage}
+                  onClick={handleDownloadClick}
                   className="w-full flex items-center justify-center gap-2 bg-white text-slate-900 px-6 py-3 rounded-xl font-semibold hover:bg-slate-100 transition-colors shadow-lg"
                 >
                   <Download size={18} />
@@ -613,6 +634,102 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Sticky Mobile Bar */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">Total a Cobrar</p>
+            <p className="text-xl font-bold text-slate-900">{formatCurrency(calc.totalCobrar)}</p>
+          </div>
+          <button 
+            onClick={scrollToResults}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl text-sm font-semibold shadow-md active:scale-95 transition-transform"
+          >
+            Ver Detalle
+            <ChevronUp size={16} />
+          </button>
+        </div>
+      </div>
+
+      {/* Email Capture Modal */}
+      <AnimatePresence>
+        {showEmailModal && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEmailModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 sm:p-8">
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xl font-bold text-slate-900">Descargar Resumen</h3>
+                  <button 
+                    onClick={() => setShowEmailModal(false)}
+                    className="p-2 hover:bg-slate-100 rounded-full transition-colors"
+                  >
+                    <X size={20} className="text-slate-400" />
+                  </button>
+                </div>
+                
+                <p className="text-slate-600 mb-6 text-sm">
+                  Opcional: Déjanos tu contacto para enviarte actualizaciones y herramientas útiles para freelancers.
+                </p>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">
+                      Nombre
+                    </label>
+                    <input 
+                      type="text"
+                      value={userData.name}
+                      onChange={(e) => setUserData({ ...userData, name: e.target.value })}
+                      placeholder="Tu nombre"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1.5 ml-1">
+                      Email
+                    </label>
+                    <input 
+                      type="email"
+                      value={userData.email}
+                      onChange={(e) => setUserData({ ...userData, email: e.target.value })}
+                      placeholder="tu@email.com"
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-8 flex flex-col gap-3">
+                  <button 
+                    onClick={proceedWithDownload}
+                    className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors"
+                  >
+                    Descargar Ahora
+                  </button>
+                  <button 
+                    onClick={proceedWithDownload}
+                    className="w-full text-slate-400 py-2 text-sm font-medium hover:text-slate-600 transition-colors"
+                  >
+                    Omitir y descargar
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
