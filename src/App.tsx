@@ -19,6 +19,7 @@ export default function App() {
   // Datos del Proyecto
   const [nombreProyecto, setNombreProyecto] = useState<string>('');
   const [horasProyecto, setHorasProyecto] = useState<number | ''>('');
+  const [margenImprevistos, setMargenImprevistos] = useState<number>(20);
   const [insumos, setInsumos] = useState<{id: string, descripcion: string, costo: number | ''}[]>([
     { id: '1', descripcion: '', costo: '' }
   ]);
@@ -69,15 +70,17 @@ export default function App() {
     const sm = Number(salarioMensual) || 0;
     const dh = Number(diasHabiles) || 1;
     const hp = Number(horasProyecto) || 0;
+    const mi = Number(margenImprevistos) || 0;
     const ci = insumos.reduce((acc, curr) => acc + (Number(curr.costo) || 0), 0);
     const ind = Number(indirectos) || 0;
     const fin = Number(financiamiento) || 0;
     const uti = Number(utilidad) || 0;
     const ivaPct = Number(ivaPorcentaje) || 0;
 
+    const horasEfectivas = hp * (1 + mi / 100);
     const salarioDiario = sm / dh;
     const tarifaHora = salarioDiario / 8;
-    const costoManoObra = tarifaHora * hp;
+    const costoManoObra = tarifaHora * horasEfectivas;
     const subtotal = costoManoObra + ci;
 
     const montoIndirectos = subtotal * (ind / 100);
@@ -95,6 +98,7 @@ export default function App() {
     return {
       salarioDiario,
       tarifaHora,
+      horasEfectivas,
       costoManoObra,
       costoInsumosTotal: ci,
       subtotal,
@@ -106,7 +110,7 @@ export default function App() {
       ivaPct,
       totalCobrar
     };
-  }, [salarioMensual, diasHabiles, horasProyecto, insumos, indirectos, financiamiento, utilidad, ivaPorcentaje]);
+  }, [salarioMensual, diasHabiles, horasProyecto, margenImprevistos, insumos, indirectos, financiamiento, utilidad, ivaPorcentaje]);
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda }).format(val);
@@ -316,15 +320,8 @@ export default function App() {
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-2 group relative w-fit">
-                    Horas a invertir en el proyecto
-                    <div className="relative flex items-center">
-                      <Info size={16} className="text-slate-400 cursor-help" />
-                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 p-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 text-center">
-                        Se sugiere agregar un 20% extra de holgura para imprevistos.
-                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
-                      </div>
-                    </div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Horas base a invertir
                   </label>
                   <input
                     type="number"
@@ -333,6 +330,36 @@ export default function App() {
                     onChange={(e) => setHorasProyecto(e.target.value === '' ? '' : Number(e.target.value))}
                     className="block w-full sm:w-1/2 px-3 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors"
                     placeholder="Ej. 40"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 space-y-4">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700">
+                        Margen de imprevistos <span className="text-emerald-600 ml-1">+{margenImprevistos}%</span>
+                      </label>
+                      <p className="text-xs text-slate-500 mt-1">
+                        Horas extra por reuniones, correcciones y tiempos muertos
+                      </p>
+                    </div>
+                    {horasProyecto !== '' && (
+                      <div className="text-right">
+                        <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">Cálculo efectivo</p>
+                        <p className="text-sm font-semibold text-slate-600">
+                          {horasProyecto} hrs base → {calc.horasEfectivas.toFixed(1)} hrs efectivas
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="50"
+                    step="5"
+                    value={margenImprevistos}
+                    onChange={(e) => setMargenImprevistos(Number(e.target.value))}
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                   />
                 </div>
                 
@@ -597,8 +624,9 @@ export default function App() {
 
           <div className="grid grid-cols-2 gap-8 mb-10">
             <div className="bg-slate-50 p-6 rounded-2xl">
-              <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Horas Invertidas</h3>
-              <p className="text-2xl font-bold text-slate-800">{horasProyecto || 0} hrs</p>
+              <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Horas Efectivas</h3>
+              <p className="text-2xl font-bold text-slate-800">{calc.horasEfectivas.toFixed(1)} hrs</p>
+              <p className="text-[10px] text-slate-400 mt-1">({horasProyecto || 0} base + {margenImprevistos}%)</p>
             </div>
             <div className="bg-slate-50 p-6 rounded-2xl">
               <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Tarifa por Hora</h3>
