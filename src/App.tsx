@@ -128,15 +128,14 @@ export default function App() {
       try {
         fetch('https://script.google.com/macros/s/AKfycbyX1ukSwUaTDjlxchbEo6RBqYuuKq0XhsEhx1QLQUwLKdkbkFioQkWzwIPU0DArI6sl/exec', {
           method: 'POST',
-          mode: 'no-cors',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'text/plain',
           },
           body: JSON.stringify({
             nombre: userData.name,
             email: userData.email
           }),
-        });
+        }).catch(() => {});
       } catch (err) {
         console.error('Error sending data:', err);
       }
