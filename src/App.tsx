@@ -126,7 +126,7 @@ export default function App() {
       
       // Enviar a Google Apps Script
       try {
-        fetch('https://script.google.com/macros/s/AKfycbzKp7anQs72QfK-9nIom63HWtRa8cLMYMdw8_spWRUvB9Nr5ch97xlq_HRuH9Mh-PGL/exec', {
+        fetch('https://script.google.com/macros/s/AKfycbyHMYFfBO8zgDhFy12L7mfekuhnuX5om7WRzkJO6Om_-YUWKdSt7M9l_cyY6GOJtcDK/exec', {
           method: 'POST',
           mode: 'no-cors',
           headers: {
