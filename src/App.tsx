@@ -143,7 +143,7 @@ export default function App() {
     }
 
     // Sanitizar nombre de archivo para evitar caracteres inválidos
-    const safeName = (nombreProyecto || 'Proyecto').replace(/[/\\?%*:|"<>]/g, '-');
+    const safeName = (nombreProyecto || 'Proyecto General').replace(/[/\\?%*:|"<>]/g, '-');
     const fileName = `Cotizacion-${safeName}-${new Date().getTime()}.pdf`;
 
     const opt = {
@@ -660,103 +660,125 @@ export default function App() {
       >
         <div 
           ref={captureRef}
-          className="w-[800px] bg-white p-12 text-slate-900 font-sans"
-          style={{ width: '800px' }}
+          id="pdf-template"
+          className="w-[800px] bg-white p-16 text-[#1e293b] font-sans"
+          style={{ width: '800px', minHeight: '1120px', display: 'flex', flexDirection: 'column' }}
         >
-          <div className="flex items-center justify-between mb-12 border-b border-slate-200 pb-8">
-            <div className="flex items-center gap-4">
-              <div className="bg-blue-600 p-3 rounded-2xl text-white">
-                <Calculator size={32} />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-900">Reporte Profesional de Honorarios</h1>
-                <p className="text-slate-500 text-sm">Generado el {new Date().toLocaleDateString('es-MX', { dateStyle: 'long' })}</p>
+          {/* Encabezado Profesional */}
+          <div className="flex justify-between items-start mb-12 border-b-2 border-[#2563eb] pb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-[#1e293b] mb-2">Reporte de Estimación de Honorarios</h1>
+              <p className="text-[#64748b] text-sm">Oficina Técnica de Ingeniería de Costos</p>
+              <div className="mt-6">
+                <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-1">Proyecto:</p>
+                <p className="text-xl font-bold text-[#1e293b]">{nombreProyecto || 'Proyecto General'}</p>
               </div>
             </div>
             <div className="text-right">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Proyecto</p>
-              <p className="text-lg font-bold text-slate-800">{nombreProyecto || 'Sin nombre'}</p>
+              <div className="bg-[#2563eb] text-white p-4 rounded-xl mb-4 inline-block">
+                <Calculator size={40} />
+              </div>
+              <p className="text-[#64748b] text-xs font-medium">Fecha de Emisión:</p>
+              <p className="text-[#1e293b] font-bold">{new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-6 mb-12">
-            <div className="bg-slate-50 p-6 rounded-2xl">
-              <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Horas Efectivas</h3>
-              <p className="text-2xl font-bold text-slate-800">{calc.horasEfectivas.toFixed(1)} hrs</p>
-              <p className="text-[10px] text-slate-400 mt-1">({horasProyecto || 0} base + {margenImprevistos}%)</p>
+          {/* Cuerpo del Reporte */}
+          <div className="flex-grow">
+            <div className="mb-10">
+              <h2 className="text-sm font-bold uppercase tracking-widest text-[#64748b] mb-4 border-l-4 border-[#2563eb] pl-3">Resumen de Inversión</h2>
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="bg-[#f8fafc]">
+                    <th className="border border-[#e2e8f0] px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[#64748b]">Concepto de Costo</th>
+                    <th className="border border-[#e2e8f0] px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-[#64748b]">Importe Parcial</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#e2e8f0]">
+                  <tr>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Mano de Obra Directa ({calc.horasEfectivas.toFixed(1)} hrs efectivas)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.costoManoObra)}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Insumos, Herramientas y Gastos Directos</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.costoInsumosTotal)}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Gastos Indirectos de Operación ({indirectos}%)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.montoIndirectos)}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Costo por Financiamiento ({financiamiento}%)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.montoFinanciamiento)}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Utilidad del Prestador de Servicios ({utilidad}%)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.montoUtilidad)}</td>
+                  </tr>
+                  <tr className="bg-[#f8fafc]">
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm font-bold text-[#1e293b]">Subtotal (Precio Neto)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-bold text-[#1e293b]">{formatCurrency(calc.precioNeto)}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#64748b]">Impuesto al Valor Agregado (IVA {calc.ivaPct}%)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm text-[#64748b]">{formatCurrency(calc.iva)}</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr className="bg-[#1e293b] text-white">
+                    <td className="px-6 py-5 text-base font-bold uppercase tracking-wider">Total Final a Cobrar</td>
+                    <td className="px-6 py-5 text-right text-2xl font-bold">{formatCurrency(calc.totalCobrar)}</td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
-            <div className="bg-slate-50 p-6 rounded-2xl">
-              <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Tarifa por Hora</h3>
-              <p className="text-2xl font-bold text-blue-600">{formatCurrency(calc.tarifaHora)}</p>
-            </div>
-            <div className="bg-blue-600 p-6 rounded-2xl text-white">
-              <h3 className="text-xs uppercase tracking-widest text-blue-200 font-bold mb-1">Total a Cobrar</h3>
-              <p className="text-2xl font-bold">{formatCurrency(calc.totalCobrar)}</p>
-            </div>
-          </div>
 
-          <div className="space-y-6 mb-12">
-            <h3 className="text-sm uppercase tracking-widest text-slate-400 font-bold border-b border-slate-100 pb-2">Desglose Detallado de Costos</h3>
-            
-            <div className="grid grid-cols-2 gap-x-12 gap-y-4">
-              <div className="flex justify-between py-2 border-b border-slate-50">
-                <span className="text-slate-600">Mano de Obra</span>
-                <span className="font-semibold">{formatCurrency(calc.costoManoObra)}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-50">
-                <span className="text-slate-600">Insumos y Gastos</span>
-                <span className="font-semibold">{formatCurrency(calc.costoInsumosTotal)}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-50">
-                <span className="text-slate-600">Indirectos ({indirectos}%)</span>
-                <span className="font-semibold">{formatCurrency(calc.montoIndirectos)}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-50">
-                <span className="text-slate-600">Financiamiento ({financiamiento}%)</span>
-                <span className="font-semibold">{formatCurrency(calc.montoFinanciamiento)}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-50">
-                <span className="text-slate-600">Utilidad ({utilidad}%)</span>
-                <span className="font-semibold">{formatCurrency(calc.montoUtilidad)}</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-slate-50">
-                <span className="text-slate-600">IVA ({calc.ivaPct}%)</span>
-                <span className="font-semibold">{formatCurrency(calc.iva)}</span>
-              </div>
-            </div>
-          </div>
-
-          {insumos.some(i => i.descripcion) && (
-            <div className="mb-12">
-              <h3 className="text-sm uppercase tracking-widest text-slate-400 font-bold border-b border-slate-100 pb-2 mb-4">Detalle de Insumos</h3>
-              <div className="bg-slate-50 rounded-2xl overflow-hidden">
-                <table className="w-full text-left text-sm">
+            {insumos.some(i => i.descripcion) && (
+              <div className="mb-10">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-[#64748b] mb-4 border-l-4 border-[#10b981] pl-3">Anexo: Detalle de Insumos</h2>
+                <table className="w-full border-collapse">
                   <thead>
-                    <tr className="bg-slate-100">
-                      <th className="px-6 py-3 font-bold text-slate-600">Descripción</th>
-                      <th className="px-6 py-3 font-bold text-slate-600 text-right">Costo</th>
+                    <tr className="bg-[#f0fdf4]">
+                      <th className="border border-[#d1fae5] px-6 py-3 text-left text-xs font-bold text-[#065f46]">Descripción del Concepto</th>
+                      <th className="border border-[#d1fae5] px-6 py-3 text-right text-xs font-bold text-[#065f46]">Costo Unitario</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-200">
+                  <tbody className="divide-y divide-[#d1fae5]">
                     {insumos.filter(i => i.descripcion).map((insumo, idx) => (
                       <tr key={idx}>
-                        <td className="px-6 py-3 text-slate-600">{insumo.descripcion}</td>
-                        <td className="px-6 py-3 text-slate-800 font-medium text-right">{formatCurrency(Number(insumo.costo) || 0)}</td>
+                        <td className="border border-[#d1fae5] px-6 py-3 text-sm text-[#065f46]">{insumo.descripcion}</td>
+                        <td className="border border-[#d1fae5] px-6 py-3 text-right text-sm font-medium text-[#065f46]">{formatCurrency(Number(insumo.costo) || 0)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          <div className="mt-auto pt-12 border-t border-slate-200 flex justify-between items-end text-slate-400">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest mb-1">Generado por</p>
-              <p className="text-sm font-bold text-slate-600">Calculadora de Honorarios Freelance</p>
+          {/* Pie de Página y CTA */}
+          <div className="mt-auto border-t border-[#e2e8f0] pt-8">
+            <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded-2xl p-6 mb-8">
+              <div className="flex items-center gap-4">
+                <div className="bg-[#2563eb] text-white p-2 rounded-lg">
+                  <Briefcase size={24} />
+                </div>
+                <div>
+                  <p className="text-[#1e3a8a] font-bold text-sm">¿Necesitas presupuestos más complejos?</p>
+                  <p className="text-[#2563eb] text-xs">Conoce el <span className="font-bold">Cotizador Constructor PRO</span> en <span className="underline">romeleliseo.com/cotizadorpro</span></p>
+                </div>
+              </div>
             </div>
-            <div className="text-right text-[10px]">
-              <p>Este documento es un reporte informativo basado en los datos ingresados por el usuario.</p>
+            
+            <div className="flex justify-between items-end text-[#94a3b8]">
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest mb-1">Fuente de Cálculo:</p>
+                <p className="text-xs">Cálculo generado en <span className="font-bold text-[#64748b]">https://romeleliseo.com/cuantocobro</span></p>
+                <p className="text-[10px] mt-1 italic">Herramienta para profesionales de la construcción</p>
+              </div>
+              <div className="text-right text-[9px] max-w-[300px]">
+                <p>Este reporte es una estimación técnica basada en los parámetros proporcionados por el usuario. No constituye una oferta vinculante hasta ser validada por un profesional.</p>
+              </div>
             </div>
           </div>
         </div>
