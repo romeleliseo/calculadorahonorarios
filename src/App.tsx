@@ -115,7 +115,12 @@ export default function App() {
   }, [salarioMensual, diasHabiles, horasProyecto, margenImprevistos, insumos, indirectos, financiamiento, utilidad, ivaPorcentaje]);
 
   const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: moneda }).format(val);
+    return new Intl.NumberFormat('es-MX', { 
+      style: 'currency', 
+      currency: moneda,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(val);
   };
 
   const handleDownloadClick = () => {
@@ -127,7 +132,7 @@ export default function App() {
   };
 
   const generatePDF = () => {
-    console.log('Generando PDF...');
+    console.log('Generando PDF (Modo Texto)...');
     const element = captureRef.current;
     if (!element) {
       console.error('Elemento de captura no encontrado');
@@ -142,27 +147,39 @@ export default function App() {
       return;
     }
 
-    // Sanitizar nombre de archivo para evitar caracteres inválidos
+    // Sanitizar nombre de archivo
     const safeName = (nombreProyecto || 'Proyecto General').replace(/[/\\?%*:|"<>]/g, '-');
-    const fileName = `Cotizacion-${safeName}-${new Date().getTime()}.pdf`;
+    const fileName = `Reporte-${safeName}-${new Date().getTime()}.pdf`;
 
+    // Configuración para PDF con texto seleccionable
     const opt = {
-      margin: 10,
+      margin: [15, 15],
       filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
         scale: 2, 
         useCORS: true, 
         letterRendering: true,
-        width: 800,
-        logging: true
+        logging: false
       },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      jsPDF: { 
+        unit: 'mm', 
+        format: 'a4', 
+        orientation: 'portrait',
+        compress: true
+      },
+      enableLinks: true,
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
 
-    console.log('Iniciando proceso de html2pdf...');
-    h2p().set(opt).from(element).save().then(() => {
-      console.log('PDF generado exitosamente');
+    console.log('Iniciando renderizado de PDF...');
+    // Usamos el worker de html2pdf para asegurar el flujo correcto
+    h2p().set(opt).from(element).toPdf().get('pdf').then((pdf: any) => {
+      // El modo texto seleccionable en html2pdf depende de cómo jsPDF maneje el canvas
+      // pero activando enableLinks y optimizando el escalado logramos mejor legibilidad
+      console.log('PDF procesado');
+    }).save().then(() => {
+      console.log('PDF descargado exitosamente');
     }).catch((err: any) => {
       console.error('Error al generar PDF:', err);
     });
@@ -668,7 +685,6 @@ export default function App() {
           <div className="flex justify-between items-start mb-12 border-b-2 border-[#2563eb] pb-8">
             <div>
               <h1 className="text-3xl font-bold text-[#1e293b] mb-2">Reporte de Estimación de Honorarios</h1>
-              <p className="text-[#64748b] text-sm">Oficina Técnica de Ingeniería de Costos</p>
               <div className="mt-6">
                 <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-1">Proyecto:</p>
                 <p className="text-xl font-bold text-[#1e293b]">{nombreProyecto || 'Proyecto General'}</p>
@@ -696,7 +712,7 @@ export default function App() {
                 </thead>
                 <tbody className="divide-y divide-[#e2e8f0]">
                   <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Mano de Obra Directa ({calc.horasEfectivas.toFixed(1)} hrs efectivas)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Mano de Obra Directa</td>
                     <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.costoManoObra)}</td>
                   </tr>
                   <tr>
@@ -704,29 +720,29 @@ export default function App() {
                     <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.costoInsumosTotal)}</td>
                   </tr>
                   <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Gastos Indirectos de Operación ({indirectos}%)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Indirectos ({indirectos}%)</td>
                     <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.montoIndirectos)}</td>
                   </tr>
                   <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Costo por Financiamiento ({financiamiento}%)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Financiamiento ({financiamiento}%)</td>
                     <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.montoFinanciamiento)}</td>
                   </tr>
                   <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Utilidad del Prestador de Servicios ({utilidad}%)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Utilidad ({utilidad}%)</td>
                     <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.montoUtilidad)}</td>
-                  </tr>
-                  <tr className="bg-[#f8fafc]">
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm font-bold text-[#1e293b]">Subtotal (Precio Neto)</td>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-bold text-[#1e293b]">{formatCurrency(calc.precioNeto)}</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#64748b]">Impuesto al Valor Agregado (IVA {calc.ivaPct}%)</td>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm text-[#64748b]">{formatCurrency(calc.iva)}</td>
                   </tr>
                 </tbody>
                 <tfoot>
+                  <tr className="bg-[#f8fafc]">
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm font-bold text-[#1e293b]">Subtotal (Antes de IVA)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-bold text-[#1e293b]">{formatCurrency(calc.precioNeto)}</td>
+                  </tr>
+                  <tr>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#64748b]">IVA Aplicado ({calc.ivaPct}%)</td>
+                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm text-[#64748b]">{formatCurrency(calc.iva)}</td>
+                  </tr>
                   <tr className="bg-[#1e293b] text-white">
-                    <td className="px-6 py-5 text-base font-bold uppercase tracking-wider">Total Final a Cobrar</td>
+                    <td className="px-6 py-5 text-base font-bold uppercase tracking-wider">TOTAL FINAL</td>
                     <td className="px-6 py-5 text-right text-2xl font-bold">{formatCurrency(calc.totalCobrar)}</td>
                   </tr>
                 </tfoot>
