@@ -128,30 +128,39 @@ export default function App() {
 
   const generatePDF = () => {
     const element = captureRef.current;
-    if (!element) return;
+    if (!element) {
+      console.error('Elemento de captura no encontrado');
+      return;
+    }
     
-    // Acceder a la librería desde el objeto window (cargada vía CDN)
     // @ts-ignore
     const h2p = window.html2pdf;
-    
     if (!h2p) {
-      console.error('html2pdf library not found');
+      console.error('Librería html2pdf no encontrada en window');
+      alert('Error: La librería de PDF no se ha cargado correctamente. Por favor, recarga la página.');
       return;
     }
 
+    // Sanitizar nombre de archivo para evitar caracteres inválidos
+    const safeName = (nombreProyecto || 'Proyecto').replace(/[/\\?%*:|"<>]/g, '-');
+    const fileName = `Cotizacion-${safeName}-${new Date().getTime()}.pdf`;
+
     const opt = {
       margin: 10,
-      filename: `Cotizacion-${nombreProyecto || 'Proyecto'}-${new Date().toLocaleDateString()}.pdf`,
+      filename: fileName,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { 
         scale: 2, 
         useCORS: true, 
-        letterRendering: true 
+        letterRendering: true,
+        width: 800
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    h2p().set(opt).from(element).save();
+    h2p().set(opt).from(element).save().catch((err: any) => {
+      console.error('Error al generar PDF:', err);
+    });
   };
 
   const proceedWithDownload = async (shouldSend = true) => {
@@ -177,7 +186,10 @@ export default function App() {
     }
     
     setShowEmailModal(false);
-    generatePDF();
+    // Pequeño retardo para asegurar que el modal se cierre y la UI sea estable
+    setTimeout(() => {
+      generatePDF();
+    }, 300);
   };
 
   const scrollToResults = () => {
@@ -637,10 +649,11 @@ export default function App() {
       </main>
 
       {/* Hidden Capture Area for PDF Export */}
-      <div className="fixed -left-[9999px] top-0">
+      <div className="absolute top-0 left-0 -z-50 opacity-0 pointer-events-none overflow-hidden h-0">
         <div 
           ref={captureRef}
           className="w-[800px] bg-white p-12 text-slate-900 font-sans"
+          style={{ width: '800px' }}
         >
           <div className="flex items-center justify-between mb-12 border-b border-slate-200 pb-8">
             <div className="flex items-center gap-4">
