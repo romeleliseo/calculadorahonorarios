@@ -127,6 +127,7 @@ export default function App() {
   };
 
   const generatePDF = () => {
+    console.log('Generando PDF...');
     const element = captureRef.current;
     if (!element) {
       console.error('Elemento de captura no encontrado');
@@ -153,12 +154,16 @@ export default function App() {
         scale: 2, 
         useCORS: true, 
         letterRendering: true,
-        width: 800
+        width: 800,
+        logging: true
       },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    h2p().set(opt).from(element).save().catch((err: any) => {
+    console.log('Iniciando proceso de html2pdf...');
+    h2p().set(opt).from(element).save().then(() => {
+      console.log('PDF generado exitosamente');
+    }).catch((err: any) => {
       console.error('Error al generar PDF:', err);
     });
   };
@@ -649,7 +654,10 @@ export default function App() {
       </main>
 
       {/* Hidden Capture Area for PDF Export */}
-      <div className="absolute top-0 left-0 -z-50 opacity-0 pointer-events-none overflow-hidden h-0">
+      <div 
+        className="fixed top-0 left-[-9999px] overflow-hidden"
+        style={{ width: '800px', visibility: 'visible' }}
+      >
         <div 
           ref={captureRef}
           className="w-[800px] bg-white p-12 text-slate-900 font-sans"
@@ -800,7 +808,7 @@ export default function App() {
                 </div>
                 
                 <p className="text-slate-600 mb-6 text-sm">
-                  Opcional: Déjanos tu contacto para enviarte actualizaciones y herramientas útiles para freelancers.
+                  Ingresa tus datos para descargar tu reporte profesional detallado.
                 </p>
 
                 <div className="space-y-4">
@@ -810,6 +818,7 @@ export default function App() {
                     </label>
                     <input 
                       type="text"
+                      required
                       value={userData.name}
                       onChange={(e) => setUserData({ ...userData, name: e.target.value })}
                       placeholder="Tu nombre"
@@ -822,6 +831,7 @@ export default function App() {
                     </label>
                     <input 
                       type="email"
+                      required
                       value={userData.email}
                       onChange={(e) => setUserData({ ...userData, email: e.target.value })}
                       placeholder="tu@email.com"
@@ -832,16 +842,16 @@ export default function App() {
 
                 <div className="mt-8 flex flex-col gap-3">
                   <button 
-                    onClick={() => proceedWithDownload(true)}
+                    onClick={() => {
+                      if (userData.name && userData.email) {
+                        proceedWithDownload(true);
+                      } else {
+                        alert('Por favor, ingresa tu nombre y email.');
+                      }
+                    }}
                     className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors"
                   >
                     Descargar Ahora
-                  </button>
-                  <button 
-                    onClick={() => proceedWithDownload(false)}
-                    className="w-full text-slate-400 py-2 text-sm font-medium hover:text-slate-600 transition-colors"
-                  >
-                    Omitir y descargar
                   </button>
                 </div>
               </div>
