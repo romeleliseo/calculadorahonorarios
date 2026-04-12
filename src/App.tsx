@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
-import { Info, Calculator, ArrowRight, DollarSign, Clock, Briefcase, Percent, Globe, Plus, Trash2, Download, FileText, Save, X, ChevronUp } from 'lucide-react';
-import { toPng } from 'html-to-image';
+import { Info, Calculator, ArrowRight, DollarSign, Clock, Briefcase, Percent, Globe, Plus, Trash2, Download, FileText, Save, X, ChevronUp, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function App() {
@@ -32,6 +31,9 @@ export default function App() {
   // PWA & Modal State
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [userData, setUserData] = useState({ name: '', email: '' });
+  const [leadCapturado, setLeadCapturado] = useState<boolean>(() => {
+    return localStorage.getItem('lead_capturado') === 'true';
+  });
 
   const captureRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -117,13 +119,31 @@ export default function App() {
   };
 
   const handleDownloadClick = () => {
-    setShowEmailModal(true);
+    if (leadCapturado) {
+      generatePDF();
+    } else {
+      setShowEmailModal(true);
+    }
+  };
+
+  const generatePDF = () => {
+    if (captureRef.current === null) return;
+    
+    const element = captureRef.current;
+    const opt = {
+      margin: 10,
+      filename: `Cotizacion-${nombreProyecto || 'Proyecto'}-${new Date().toLocaleDateString()}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // @ts-ignore
+    html2pdf().set(opt).from(element).save();
   };
 
   const proceedWithDownload = async (shouldSend = true) => {
     if (shouldSend && (userData.email || userData.name)) {
-      console.log('User captured:', userData);
-      
       // Enviar a Google Apps Script
       try {
         fetch('https://script.google.com/macros/s/AKfycbyX1ukSwUaTDjlxchbEo6RBqYuuKq0XhsEhx1QLQUwLKdkbkFioQkWzwIPU0DArI6sl/exec', {
@@ -136,24 +156,16 @@ export default function App() {
             email: userData.email
           }),
         }).catch(() => {});
+        
+        localStorage.setItem('lead_capturado', 'true');
+        setLeadCapturado(true);
       } catch (err) {
         console.error('Error sending data:', err);
       }
     }
     
     setShowEmailModal(false);
-    
-    if (captureRef.current === null) return;
-    
-    try {
-      const dataUrl = await toPng(captureRef.current, { cacheBust: true, backgroundColor: '#ffffff' });
-      const link = document.createElement('a');
-      link.download = `Cotizacion-${nombreProyecto || 'Proyecto'}-${new Date().toLocaleDateString()}.png`;
-      link.href = dataUrl;
-      link.click();
-    } catch (err) {
-      console.error('Error al exportar imagen:', err);
-    }
+    generatePDF();
   };
 
   const scrollToResults = () => {
@@ -491,137 +503,150 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="border-t border-slate-800 pt-6">
-                <h3 className="text-sm font-medium text-slate-300 mb-4">Desglose del Precio Neto</h3>
-                
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
-                      <span className="text-slate-400">Mano de Obra</span>
+              {leadCapturado ? (
+                <div className="border-t border-slate-800 pt-6 animate-in fade-in duration-700">
+                  <h3 className="text-sm font-medium text-slate-300 mb-4">Desglose del Precio Neto</h3>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+                        <span className="text-slate-400">Mano de Obra</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(calc.costoManoObra)}</span>
                     </div>
-                    <span className="font-medium">{formatCurrency(calc.costoManoObra)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                      <span className="text-slate-400">Insumos</span>
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
+                        <span className="text-slate-400">Insumos</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(calc.costoInsumosTotal)}</span>
                     </div>
-                    <span className="font-medium">{formatCurrency(calc.costoInsumosTotal)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
-                      <span className="text-slate-400">Indirectos</span>
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+                        <span className="text-slate-400">Indirectos</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(calc.montoIndirectos)}</span>
                     </div>
-                    <span className="font-medium">{formatCurrency(calc.montoIndirectos)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
-                      <span className="text-slate-400">Financiamiento</span>
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
+                        <span className="text-slate-400">Financiamiento</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(calc.montoFinanciamiento)}</span>
                     </div>
-                    <span className="font-medium">{formatCurrency(calc.montoFinanciamiento)}</span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2.5 h-2.5 rounded-full bg-violet-500"></div>
-                      <span className="text-slate-400">Utilidad</span>
+                    <div className="flex justify-between items-center text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2.5 h-2.5 rounded-full bg-violet-500"></div>
+                        <span className="text-slate-400">Utilidad</span>
+                      </div>
+                      <span className="font-medium">{formatCurrency(calc.montoUtilidad)}</span>
                     </div>
-                    <span className="font-medium">{formatCurrency(calc.montoUtilidad)}</span>
                   </div>
-                </div>
-              </div>
 
-              {chartData.length > 0 && (
-                <div className="mt-8 h-64 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={chartData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={70}
-                        outerRadius={100}
-                        paddingAngle={2}
-                        dataKey="value"
-                        stroke="none"
-                      >
-                        {chartData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip 
-                        formatter={(value: number) => formatCurrency(value)}
-                        contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f8fafc' }}
-                        itemStyle={{ color: '#f8fafc' }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {chartData.length > 0 && (
+                    <div className="mt-8 h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={chartData}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={70}
+                            outerRadius={100}
+                            paddingAngle={2}
+                            dataKey="value"
+                            stroke="none"
+                          >
+                            {chartData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip 
+                            formatter={(value: number) => formatCurrency(value)}
+                            contentStyle={{ backgroundColor: '#1e293b', border: 'none', borderRadius: '8px', color: '#f8fafc' }}
+                            itemStyle={{ color: '#f8fafc' }}
+                          />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border-t border-slate-800 pt-8 pb-4 text-center">
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-800 text-blue-400 mb-4">
+                    <Lock size={20} />
+                  </div>
+                  <p className="text-slate-300 text-sm font-medium mb-2">Desglose Detallado Bloqueado</p>
+                  <p className="text-slate-500 text-xs px-4 leading-relaxed">
+                    Para ver el desglose detallado y descargar tu reporte profesional, ingresa tus datos.
+                  </p>
                 </div>
               )}
 
-              <div className="mt-6">
+              <div className="mt-8">
                 <button
                   onClick={handleDownloadClick}
-                  className="w-full flex items-center justify-center gap-2 bg-white text-slate-900 px-6 py-3 rounded-xl font-semibold hover:bg-slate-100 transition-colors shadow-lg"
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white px-6 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg hover:shadow-blue-500/20 active:scale-95"
                 >
-                  <Download size={18} />
-                  Descargar Resumen (Imagen)
+                  <Download size={20} />
+                  Descargar Reporte PDF
                 </button>
               </div>
             </div>
 
+            {/* CTA Section moved here */}
+            <div className="mt-8">
+              <a 
+                href="https://romeleliseo.gumroad.com/l/cotizador-pro" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="group block w-full bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 hover:border-blue-500/50 text-white rounded-2xl p-6 transition-all duration-300 shadow-lg"
+              >
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold mb-1 flex items-center gap-2">
+                      Cotizador Constructor PRO
+                      <ArrowRight size={16} className="text-blue-400 group-hover:translate-x-1 transition-transform" />
+                    </h3>
+                    <p className="text-slate-400 text-xs leading-relaxed">
+                      ¿Necesitas algo más complejo? Para proyectos de construcción con catálogo de conceptos y precios unitarios.
+                    </p>
+                  </div>
+                  <div className="text-blue-400 text-sm font-semibold">
+                    El siguiente paso lógico →
+                  </div>
+                </div>
+              </a>
+            </div>
           </div>
         </div>
-
-        {/* CTA Section */}
-        <div className="mt-12">
-          <a 
-            href="https://romeleliseo.gumroad.com/l/cotizador-pro" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="group block w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-2xl p-1 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
-          >
-            <div className="bg-white/10 rounded-xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 backdrop-blur-sm">
-              <div className="flex-1 text-center sm:text-left">
-                <h3 className="text-xl sm:text-2xl font-bold mb-2">Cotizador Constructor PRO</h3>
-                <p className="text-blue-100 text-sm sm:text-base">
-                  Para proyectos de construcción con catálogo de conceptos y precios unitarios.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 bg-white text-blue-600 px-6 py-3 rounded-full font-semibold group-hover:bg-blue-50 transition-colors shrink-0">
-                Conoce más
-                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-              </div>
-            </div>
-          </a>
-        </div>
-
       </main>
 
-      {/* Hidden Capture Area for Image Export */}
+      {/* Hidden Capture Area for PDF Export */}
       <div className="fixed -left-[9999px] top-0">
         <div 
           ref={captureRef}
-          className="w-[600px] bg-white p-12 text-slate-900"
+          className="w-[800px] bg-white p-12 text-slate-900 font-sans"
         >
-          <div className="flex items-center gap-4 mb-8 border-b border-slate-100 pb-8">
-            <div className="bg-blue-600 p-3 rounded-2xl text-white">
-              <Calculator size={32} />
+          <div className="flex items-center justify-between mb-12 border-b border-slate-200 pb-8">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-600 p-3 rounded-2xl text-white">
+                <Calculator size={32} />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold text-slate-900">Reporte Profesional de Honorarios</h1>
+                <p className="text-slate-500 text-sm">Generado el {new Date().toLocaleDateString('es-MX', { dateStyle: 'long' })}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900">Cotización de Honorarios</h1>
-              <p className="text-slate-500 text-sm">{new Date().toLocaleDateString('es-MX', { dateStyle: 'long' })}</p>
+            <div className="text-right">
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Proyecto</p>
+              <p className="text-lg font-bold text-slate-800">{nombreProyecto || 'Sin nombre'}</p>
             </div>
           </div>
 
-          <div className="mb-10">
-            <h2 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-2">Proyecto</h2>
-            <p className="text-2xl font-bold text-slate-800">{nombreProyecto || 'Sin nombre de proyecto'}</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-8 mb-10">
+          <div className="grid grid-cols-3 gap-6 mb-12">
             <div className="bg-slate-50 p-6 rounded-2xl">
               <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Horas Efectivas</h3>
               <p className="text-2xl font-bold text-slate-800">{calc.horasEfectivas.toFixed(1)} hrs</p>
@@ -631,48 +656,74 @@ export default function App() {
               <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Tarifa por Hora</h3>
               <p className="text-2xl font-bold text-blue-600">{formatCurrency(calc.tarifaHora)}</p>
             </div>
-          </div>
-
-          <div className="space-y-4 mb-10">
-            <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">Desglose de Costos</h3>
-            <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-600">Mano de Obra</span>
-              <span className="font-semibold">{formatCurrency(calc.costoManoObra)}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-600">Insumos y Gastos</span>
-              <span className="font-semibold">{formatCurrency(calc.costoInsumosTotal)}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-600">Indirectos ({indirectos}%)</span>
-              <span className="font-semibold">{formatCurrency(calc.montoIndirectos)}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-600">Financiamiento ({financiamiento}%)</span>
-              <span className="font-semibold">{formatCurrency(calc.montoFinanciamiento)}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-600">Utilidad ({utilidad}%)</span>
-              <span className="font-semibold">{formatCurrency(calc.montoUtilidad)}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-50 bg-slate-50/50 -mx-2 px-2 rounded-lg">
-              <span className="text-slate-800 font-bold">Subtotal (Neto)</span>
-              <span className="font-bold text-slate-800">{formatCurrency(calc.precioNeto)}</span>
-            </div>
-            <div className="flex justify-between py-2 border-b border-slate-50">
-              <span className="text-slate-600">IVA ({calc.ivaPct}%)</span>
-              <span className="font-semibold">{formatCurrency(calc.iva)}</span>
+            <div className="bg-blue-600 p-6 rounded-2xl text-white">
+              <h3 className="text-xs uppercase tracking-widest text-blue-200 font-bold mb-1">Total a Cobrar</h3>
+              <p className="text-2xl font-bold">{formatCurrency(calc.totalCobrar)}</p>
             </div>
           </div>
 
-          <div className="bg-slate-900 text-white p-8 rounded-3xl flex justify-between items-center">
+          <div className="space-y-6 mb-12">
+            <h3 className="text-sm uppercase tracking-widest text-slate-400 font-bold border-b border-slate-100 pb-2">Desglose Detallado de Costos</h3>
+            
+            <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+              <div className="flex justify-between py-2 border-b border-slate-50">
+                <span className="text-slate-600">Mano de Obra</span>
+                <span className="font-semibold">{formatCurrency(calc.costoManoObra)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-50">
+                <span className="text-slate-600">Insumos y Gastos</span>
+                <span className="font-semibold">{formatCurrency(calc.costoInsumosTotal)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-50">
+                <span className="text-slate-600">Indirectos ({indirectos}%)</span>
+                <span className="font-semibold">{formatCurrency(calc.montoIndirectos)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-50">
+                <span className="text-slate-600">Financiamiento ({financiamiento}%)</span>
+                <span className="font-semibold">{formatCurrency(calc.montoFinanciamiento)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-50">
+                <span className="text-slate-600">Utilidad ({utilidad}%)</span>
+                <span className="font-semibold">{formatCurrency(calc.montoUtilidad)}</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-50">
+                <span className="text-slate-600">IVA ({calc.ivaPct}%)</span>
+                <span className="font-semibold">{formatCurrency(calc.iva)}</span>
+              </div>
+            </div>
+          </div>
+
+          {insumos.some(i => i.descripcion) && (
+            <div className="mb-12">
+              <h3 className="text-sm uppercase tracking-widest text-slate-400 font-bold border-b border-slate-100 pb-2 mb-4">Detalle de Insumos</h3>
+              <div className="bg-slate-50 rounded-2xl overflow-hidden">
+                <table className="w-full text-left text-sm">
+                  <thead>
+                    <tr className="bg-slate-100">
+                      <th className="px-6 py-3 font-bold text-slate-600">Descripción</th>
+                      <th className="px-6 py-3 font-bold text-slate-600 text-right">Costo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {insumos.filter(i => i.descripcion).map((insumo, idx) => (
+                      <tr key={idx}>
+                        <td className="px-6 py-3 text-slate-600">{insumo.descripcion}</td>
+                        <td className="px-6 py-3 text-slate-800 font-medium text-right">{formatCurrency(Number(insumo.costo) || 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-auto pt-12 border-t border-slate-200 flex justify-between items-end text-slate-400">
             <div>
-              <h3 className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-1">Total a Cobrar</h3>
-              <p className="text-3xl font-bold">{formatCurrency(calc.totalCobrar)}</p>
+              <p className="text-xs font-bold uppercase tracking-widest mb-1">Generado por</p>
+              <p className="text-sm font-bold text-slate-600">Calculadora de Honorarios Freelance</p>
             </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-500">Generado con</p>
-              <p className="text-sm font-bold">Calculadora Freelance</p>
+            <div className="text-right text-[10px]">
+              <p>Este documento es un reporte informativo basado en los datos ingresados por el usuario.</p>
             </div>
           </div>
         </div>
