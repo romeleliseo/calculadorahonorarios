@@ -127,19 +127,31 @@ export default function App() {
   };
 
   const generatePDF = () => {
-    if (captureRef.current === null) return;
-    
     const element = captureRef.current;
+    if (!element) return;
+    
+    // Acceder a la librería desde el objeto window (cargada vía CDN)
+    // @ts-ignore
+    const h2p = window.html2pdf;
+    
+    if (!h2p) {
+      console.error('html2pdf library not found');
+      return;
+    }
+
     const opt = {
       margin: 10,
       filename: `Cotizacion-${nombreProyecto || 'Proyecto'}-${new Date().toLocaleDateString()}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true, 
+        letterRendering: true 
+      },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    // @ts-ignore
-    html2pdf().set(opt).from(element).save();
+    h2p().set(opt).from(element).save();
   };
 
   const proceedWithDownload = async (shouldSend = true) => {
