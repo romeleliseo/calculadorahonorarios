@@ -284,7 +284,7 @@ export const PDFReport: React.FC<PDFReportProps> = ({
             <Text style={styles.ctaText}>
               Cotizador Constructor PRO en{' '}
               <Link style={styles.link} src="https://romeleliseo.gumroad.com/l/cotizador-pro">
-                romeleliseo.com/cotizador-pro
+                romeleliseo.com/cotizadorpro
               </Link>
             </Text>
           </View>
