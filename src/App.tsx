@@ -2,6 +2,8 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import { Info, Calculator, ArrowRight, DollarSign, Clock, Briefcase, Percent, Globe, Plus, Trash2, Download, FileText, Save, X, ChevronUp, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { pdf } from '@react-pdf/renderer';
+import { PDFReport } from './components/PDFReport';
 
 export default function App() {
   // Configuración Regional
@@ -35,7 +37,6 @@ export default function App() {
     return localStorage.getItem('lead_capturado') === 'true';
   });
 
-  const captureRef = useRef<HTMLDivElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
   // Guardado automático en LocalStorage
@@ -131,58 +132,37 @@ export default function App() {
     }
   };
 
-  const generatePDF = () => {
-    console.log('Generando PDF (Modo Texto)...');
-    const element = captureRef.current;
-    if (!element) {
-      console.error('Elemento de captura no encontrado');
-      return;
-    }
+  const generatePDF = async () => {
+    console.log('Generando PDF nativo...');
     
-    // @ts-ignore
-    const h2p = window.html2pdf;
-    if (!h2p) {
-      console.error('Librería html2pdf no encontrada en window');
-      alert('Error: La librería de PDF no se ha cargado correctamente. Por favor, recarga la página.');
-      return;
-    }
-
     // Sanitizar nombre de archivo
     const safeName = (nombreProyecto || 'Proyecto General').replace(/[/\\?%*:|"<>]/g, '-');
     const fileName = `Reporte-${safeName}-${new Date().getTime()}.pdf`;
 
-    // Configuración para PDF con texto seleccionable
-    const opt = {
-      margin: [15, 15],
-      filename: fileName,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true, 
-        letterRendering: true,
-        logging: false
-      },
-      jsPDF: { 
-        unit: 'mm', 
-        format: 'a4', 
-        orientation: 'portrait',
-        compress: true
-      },
-      enableLinks: true,
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    };
-
-    console.log('Iniciando renderizado de PDF...');
-    // Usamos el worker de html2pdf para asegurar el flujo correcto
-    h2p().set(opt).from(element).toPdf().get('pdf').then((pdf: any) => {
-      // El modo texto seleccionable en html2pdf depende de cómo jsPDF maneje el canvas
-      // pero activando enableLinks y optimizando el escalado logramos mejor legibilidad
-      console.log('PDF procesado');
-    }).save().then(() => {
-      console.log('PDF descargado exitosamente');
-    }).catch((err: any) => {
+    try {
+      const blob = await pdf(
+        <PDFReport 
+          calc={calc} 
+          nombreProyecto={nombreProyecto}
+          indirectos={indirectos}
+          financiamiento={financiamiento}
+          utilidad={utilidad}
+          insumos={insumos}
+          moneda={moneda}
+        />
+      ).toBlob();
+      
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+      console.log('PDF generado exitosamente');
+    } catch (err) {
       console.error('Error al generar PDF:', err);
-    });
+      alert('Hubo un error al generar el PDF. Por favor, intenta de nuevo.');
+    }
   };
 
   const proceedWithDownload = async (shouldSend = true) => {
@@ -669,136 +649,6 @@ export default function App() {
           </div>
         </div>
       </main>
-
-      {/* Hidden Capture Area for PDF Export */}
-      <div 
-        className="fixed top-0 left-[-9999px] overflow-hidden"
-        style={{ width: '800px', visibility: 'visible' }}
-      >
-        <div 
-          ref={captureRef}
-          id="pdf-template"
-          className="w-[800px] bg-white p-16 text-[#1e293b] font-sans"
-          style={{ width: '800px', minHeight: '1120px', display: 'flex', flexDirection: 'column' }}
-        >
-          {/* Encabezado Profesional */}
-          <div className="flex justify-between items-start mb-12 border-b-2 border-[#2563eb] pb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-[#1e293b] mb-2">Reporte de Estimación de Honorarios</h1>
-              <div className="mt-6">
-                <p className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-widest mb-1">Proyecto:</p>
-                <p className="text-xl font-bold text-[#1e293b]">{nombreProyecto || 'Proyecto General'}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <div className="bg-[#2563eb] text-white p-4 rounded-xl mb-4 inline-block">
-                <Calculator size={40} />
-              </div>
-              <p className="text-[#64748b] text-xs font-medium">Fecha de Emisión:</p>
-              <p className="text-[#1e293b] font-bold">{new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })}</p>
-            </div>
-          </div>
-
-          {/* Cuerpo del Reporte */}
-          <div className="flex-grow">
-            <div className="mb-10">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-[#64748b] mb-4 border-l-4 border-[#2563eb] pl-3">Resumen de Inversión</h2>
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-[#f8fafc]">
-                    <th className="border border-[#e2e8f0] px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-[#64748b]">Concepto de Costo</th>
-                    <th className="border border-[#e2e8f0] px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-[#64748b]">Importe Parcial</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#e2e8f0]">
-                  <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Mano de Obra Directa</td>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.costoManoObra)}</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Insumos, Herramientas y Gastos Directos</td>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.costoInsumosTotal)}</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Indirectos ({indirectos}%)</td>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.montoIndirectos)}</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Financiamiento ({financiamiento}%)</td>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.montoFinanciamiento)}</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#1e293b]">Utilidad ({utilidad}%)</td>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-medium text-[#1e293b]">{formatCurrency(calc.montoUtilidad)}</td>
-                  </tr>
-                </tbody>
-                <tfoot>
-                  <tr className="bg-[#f8fafc]">
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm font-bold text-[#1e293b]">Subtotal (Antes de IVA)</td>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm font-bold text-[#1e293b]">{formatCurrency(calc.precioNeto)}</td>
-                  </tr>
-                  <tr>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-sm text-[#64748b]">IVA Aplicado ({calc.ivaPct}%)</td>
-                    <td className="border border-[#e2e8f0] px-6 py-4 text-right text-sm text-[#64748b]">{formatCurrency(calc.iva)}</td>
-                  </tr>
-                  <tr className="bg-[#1e293b] text-white">
-                    <td className="px-6 py-5 text-base font-bold uppercase tracking-wider">TOTAL FINAL</td>
-                    <td className="px-6 py-5 text-right text-2xl font-bold">{formatCurrency(calc.totalCobrar)}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-
-            {insumos.some(i => i.descripcion) && (
-              <div className="mb-10">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-[#64748b] mb-4 border-l-4 border-[#10b981] pl-3">Anexo: Detalle de Insumos</h2>
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-[#f0fdf4]">
-                      <th className="border border-[#d1fae5] px-6 py-3 text-left text-xs font-bold text-[#065f46]">Descripción del Concepto</th>
-                      <th className="border border-[#d1fae5] px-6 py-3 text-right text-xs font-bold text-[#065f46]">Costo Unitario</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#d1fae5]">
-                    {insumos.filter(i => i.descripcion).map((insumo, idx) => (
-                      <tr key={idx}>
-                        <td className="border border-[#d1fae5] px-6 py-3 text-sm text-[#065f46]">{insumo.descripcion}</td>
-                        <td className="border border-[#d1fae5] px-6 py-3 text-right text-sm font-medium text-[#065f46]">{formatCurrency(Number(insumo.costo) || 0)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-
-          {/* Pie de Página y CTA */}
-          <div className="mt-auto border-t border-[#e2e8f0] pt-8">
-            <div className="bg-[#eff6ff] border border-[#bfdbfe] rounded-2xl p-6 mb-8">
-              <div className="flex items-center gap-4">
-                <div className="bg-[#2563eb] text-white p-2 rounded-lg">
-                  <Briefcase size={24} />
-                </div>
-                <div>
-                  <p className="text-[#1e3a8a] font-bold text-sm">¿Necesitas presupuestos más complejos?</p>
-                  <p className="text-[#2563eb] text-xs">Conoce el <span className="font-bold">Cotizador Constructor PRO</span> en <span className="underline">romeleliseo.com/cotizadorpro</span></p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex justify-between items-end text-[#94a3b8]">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-widest mb-1">Fuente de Cálculo:</p>
-                <p className="text-xs">Cálculo generado en <span className="font-bold text-[#64748b]">https://romeleliseo.com/cuantocobro</span></p>
-                <p className="text-[10px] mt-1 italic">Herramienta para profesionales de la construcción</p>
-              </div>
-              <div className="text-right text-[9px] max-w-[300px]">
-                <p>Este reporte es una estimación técnica basada en los parámetros proporcionados por el usuario. No constituye una oferta vinculante hasta ser validada por un profesional.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Sticky Mobile Bar */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 p-4 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
