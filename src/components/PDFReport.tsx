@@ -1,5 +1,5 @@
 import React from 'react';
-import { Page, Text, View, Document, StyleSheet, Font } from '@react-pdf/renderer';
+import { Page, Text, View, Document, StyleSheet, Font, Link } from '@react-pdf/renderer';
 
 // Registrar fuentes si es necesario, pero usaremos las estándar por ahora para evitar problemas de carga
 // @react-pdf/renderer usa Helvetica por defecto
@@ -136,6 +136,10 @@ const styles = StyleSheet.create({
   ctaText: {
     fontSize: 9,
     color: '#2563eb',
+  },
+  link: {
+    color: '#2563eb',
+    textDecoration: 'underline',
   },
   footerBottom: {
     flexDirection: 'row',
@@ -277,12 +281,22 @@ export const PDFReport: React.FC<PDFReportProps> = ({
         <View style={styles.footer}>
           <View style={styles.ctaBox}>
             <Text style={styles.ctaTitle}>¿Necesitas presupuestos más complejos?</Text>
-            <Text style={styles.ctaText}>Cotizador Constructor PRO en romeleliseo.com/cotizadorpro</Text>
+            <Text style={styles.ctaText}>
+              Cotizador Constructor PRO en{' '}
+              <Link style={styles.link} src="https://romeleliseo.gumroad.com/l/cotizador-pro">
+                romeleliseo.com/cotizador-pro
+              </Link>
+            </Text>
           </View>
           
           <View style={styles.footerBottom}>
             <View>
-              <Text style={styles.source}>Generado en romeleliseo.com/cuantocobro</Text>
+              <Text style={styles.source}>
+                Generado en{' '}
+                <Link style={styles.link} src="https://romeleliseo.com/cuantocobro">
+                  romeleliseo.com/cuantocobro
+                </Link>
+              </Text>
               <Text style={[styles.source, { marginTop: 2 }]}>Herramienta para profesionales de la construcción</Text>
             </View>
             <Text style={styles.disclaimer}>
