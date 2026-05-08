@@ -180,8 +180,20 @@ export default function App() {
           }),
         }).catch(() => {});
         
-        localStorage.setItem('lead_capturado', 'true');
+      localStorage.setItem('lead_capturado', 'true');
         setLeadCapturado(true);
+
+        // GA4: registrar evento de conversion lead_capturado
+        if (typeof (window as any).gtag === 'function') {
+          (window as any).gtag('event', 'lead_capturado', {
+            'event_category': 'engagement',
+            'event_label': 'calculadora_cuantocobro',
+            'value': 1,
+            'method': 'email_modal',
+            'has_name': !!userData.name,
+            'has_email': !!userData.email
+          });
+        }
       } catch (err) {
         console.error('Error sending data:', err);
       }
